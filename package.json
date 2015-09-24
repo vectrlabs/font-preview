@@ -1,0 +1,19 @@
+{
+  "name": "font-preview",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Yuren Ju <yurenju@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^1.4.2",
+    "canvas": "^1.2.9",
+    "opentype.js": "^0.4.10",
+    "request": "^2.61.0",
+    "shelljs": "^0.5.3"
+  }
+}
