@@ -1,6 +1,7 @@
 # Usage
 
 ```shell
+brew install imagemagick
 npm install
 npm start
 ```
