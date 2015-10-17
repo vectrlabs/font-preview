@@ -24,7 +24,8 @@ request(FONT_LIST_URL, function (error, response, body) {
         var filename = 'fonts/' + item.family + '.ttf';
         request(url).pipe(fs.createWriteStream(filename)).on('close', function() {
           opentype.load(filename, function(err, font) {
-            var canvas = new Canvas(250, 36)
+            // var canvas = new Canvas(250, 36)
+            var canvas = new Canvas(500, 100);
             var ctx = canvas.getContext('2d');
             if (err) {
               console.log('got error from load function', err);
@@ -36,7 +37,7 @@ request(FONT_LIST_URL, function (error, response, body) {
               return callback();
             }
             try {
-              font.draw(ctx, item.family, 0, 36, 36);
+              font.draw(ctx, item.family, 2, 38, 36);
             } catch (err) {
               console.log('got error from font.draw', err);
               badFonts.push(item.family);
@@ -46,6 +47,9 @@ request(FONT_LIST_URL, function (error, response, body) {
                             '"images/' + item.family + '.png"');
               return callback();
             }
+
+            cropCanvas(ctx, canvas);
+
             var out = fs.createWriteStream('images/' + item.family + '.png');
             var stream = canvas.pngStream();
 
@@ -59,13 +63,53 @@ request(FONT_LIST_URL, function (error, response, body) {
           });
         });
 
-
       };
     });
     async.series(tasks, function() {
       console.log('badFonts', badFonts);
     });
   }
-})
+});
+
+/**
+ * Crop canvas to contents
+ *
+ * http://stackoverflow.com/a/22267731/740836
+ *
+ * @param  {context} ctx   Canvas Context
+ * @param  {canvas} canvas HTML5 Canvas element
+ * @return {undefined}
+ */
+function cropCanvas(ctx, canvas) {
+  var w = canvas.width;
+  var h = canvas.height;
+  var pix = {x:[], y:[]};
+  var imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  var x, y, index;
+
+  for (y = 0; y < h; y++) {
+    for (x = 0; x < w; x++) {
+      index = (y * w + x) * 4;
+      if (imageData.data[index+3] > 0) {
+        pix.x.push(x);
+        pix.y.push(y);
+      }
+    }
+  }
+
+  pix.x.sort(function(a,b){return a-b});
+  pix.y.sort(function(a,b){return a-b});
+
+  var n = pix.x.length-1;
+
+  w = (pix.x[n] - pix.x[0]) + 2;
+  h = (pix.y[n] - pix.y[0]) + 2;
+
+  var cut = ctx.getImageData(pix.x[0], pix.y[0], w, h);
+
+  canvas.width = w;
+  canvas.height = h;
+  ctx.putImageData(cut, 0, 0);
+}
 
 
