@@ -105,6 +105,8 @@ function cropCanvas(ctx, canvas) {
   w = (pix.x[n] - pix.x[0]) + 2;
   h = (pix.y[n] - pix.y[0]) + 2;
 
+  if (pix.x.length === 0 || pix.y.length === 0) return;
+
   var cut = ctx.getImageData(pix.x[0], pix.y[0], w, h);
 
   canvas.width = w;
