@@ -14,16 +14,6 @@ var badFonts = [];
 mkdir('-p', 'images');
 mkdir('-p', 'fonts');
 
-function generateViaImageMagick(filename, family, fallback) {
-  var fontParam = fallback ? '-font "Open Sans.ttf" ' : '-font "' + filename + '" ' ;
-  var cmd = 'convert -fill black -size 250x36 -pointsize 36 ' +
-        '-background None ' + fontParam +
-        'label:"' + family + '" ' +
-        '"images/' + family + '.png"'
-  console.log(cmd);
-  exec(cmd);
-}
-
 var defaultFont = opentype.loadSync('Open Sans.ttf');
 
 request(FONT_LIST_URL, function (error, response, body) {
@@ -35,46 +25,41 @@ request(FONT_LIST_URL, function (error, response, body) {
         var url = item.files.regular ? item.files.regular : item.files[Object.keys(item.files)[0]];
         var filename = 'fonts/' + item.family + '.ttf';
         request(url).pipe(fs.createWriteStream(filename)).on('close', function() {
-          opentype.load(filename, function(err, font) {
-            // var canvas = new Canvas(250, 36)
-            var canvas = new Canvas(500, 100);
-            var ctx = canvas.getContext('2d');
-            if (err) {
-              console.log('got error from load function', err);
-              badFonts.push(item.family);
-              generateViaImageMagick(filename, item.family);
-              return callback();
-            }
-            var noFont = item.family.split('').some(function(c) {
-              return font.charToGlyphIndex(c) === 0;
-            });
+          var font;
+          try {
+            font = opentype.loadSync(filename);
+          }
+          catch(err) {
+            font = defaultFont;
+          }
 
-            try {
-              if (noFont) {
-                defaultFont.draw(ctx, item.family, 2, 38, 36);
-              }
-              else {
-                font.draw(ctx, item.family, 2, 38, 36);
-              }
-            } catch (err) {
-              console.log('got error from font.draw', err);
-              badFonts.push(item.family);
-              generateViaImageMagick(filename, item.family);
-              return callback();
-            }
+          // var canvas = new Canvas(250, 36)
+          var canvas = new Canvas(500, 100);
+          var ctx = canvas.getContext('2d');
+          var noFont = item.family.split('').some(function(c) {
+            return font.charToGlyphIndex(c) === 0;
+          });
 
-            cropCanvas(ctx, canvas);
+          if (noFont) {
+            font = defaultFont;
+          }
 
-            var out = fs.createWriteStream('images/' + item.family + '.png');
-            var stream = canvas.pngStream();
+          try {
+            font.draw(ctx, item.family, 2, 38, 36);
+          } catch (err) {
+            defaultFont.draw(ctx, item.family, 2, 38, 36);
+          }
 
-            stream.on('data', function(chunk){
-              out.write(chunk);
-            });
-            stream.on('end', function(){
-              callback();
-            });
+          cropCanvas(ctx, canvas);
 
+          var out = fs.createWriteStream('images/' + item.family + '.png');
+          var stream = canvas.pngStream();
+
+          stream.on('data', function(chunk){
+            out.write(chunk);
+          });
+          stream.on('end', function(){
+            callback();
           });
         });
 
