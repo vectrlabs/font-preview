@@ -14,6 +14,18 @@ var badFonts = [];
 mkdir('-p', 'images');
 mkdir('-p', 'fonts');
 
+function generateViaImageMagick(filename, family, fallback) {
+  var fontParam = fallback ? '-font "Open Sans.ttf" ' : '-font "' + filename + '" ' ;
+  var cmd = 'convert -fill black -size 250x36 -pointsize 36 ' +
+        '-background None ' + fontParam +
+        'label:"' + family + '" ' +
+        '"images/' + family + '.png"'
+  console.log(cmd);
+  exec(cmd);
+}
+
+var defaultFont = opentype.loadSync('Open Sans.ttf');
+
 request(FONT_LIST_URL, function (error, response, body) {
   if (!error && response.statusCode == 200) {
     fontList = JSON.parse(body);
@@ -30,21 +42,24 @@ request(FONT_LIST_URL, function (error, response, body) {
             if (err) {
               console.log('got error from load function', err);
               badFonts.push(item.family);
-              exec('convert -fill black -size 250x36 -pointsize 36 ' +
-                            '-background None -font "' + filename + '" ' +
-                            'label:"' + item.family + '" ' +
-                            '"images/' + item.family + '.png"');
+              generateViaImageMagick(filename, item.family);
               return callback();
             }
+            var noFont = item.family.split('').some(function(c) {
+              return font.charToGlyphIndex(c) === 0;
+            });
+
             try {
-              font.draw(ctx, item.family, 2, 38, 36);
+              if (noFont) {
+                defaultFont.draw(ctx, item.family, 2, 38, 36);
+              }
+              else {
+                font.draw(ctx, item.family, 2, 38, 36);
+              }
             } catch (err) {
               console.log('got error from font.draw', err);
               badFonts.push(item.family);
-              exec('convert -fill black -size 250x36 -pointsize 36 ' +
-                            '-background None -font "' + filename + '" ' +
-                            'label:"' + item.family + '" ' +
-                            '"images/' + item.family + '.png"');
+              generateViaImageMagick(filename, item.family);
               return callback();
             }
 
